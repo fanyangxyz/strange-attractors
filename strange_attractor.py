@@ -3,11 +3,11 @@ import sys
 from matplotlib import pyplot as plt
 import numpy as np
 import gflags
+from PIL import Image
 
 gflags.DEFINE_integer('init', 1000, '')
 gflags.DEFINE_integer('iter', 10000, '')
 gflags.DEFINE_string('name', None, '')
-gflags.DEFINE_boolean('use_line', True, '')
 FLAGS = gflags.FLAGS
 
 
@@ -22,31 +22,49 @@ def compute(x, y):
     return x_new, y_new
 
 
-def main():
-    x = 0.1
-    y = 0.1
-
-    for i in range(FLAGS.init):
-        x, y = compute(x, y)
-    print('initialized')
-
+def impl(x, y, s, a, cs):
     xs, ys = [], []
     for i in range(FLAGS.iter):
         x, y = compute(x, y)
         xs.append(x)
         ys.append(y)
+    plt.scatter(xs, ys, s=s, alpha=a, linewidth=0, edgecolors='none', c=cs)
+    return x, y
+
+
+def main(palette, x, y, name):
+
+    for i in range(FLAGS.init):
+        x, y = compute(x, y)
+    print('initialized')
+
+    with open(palette, 'rb') as f:
+        colors = np.load(f) / 255.
 
     plt.figure(figsize=(16, 16))
-    if FLAGS.use_line:
-        plt.plot(xs, ys, alpha=0.15, linewidth=0.05, c='black')
-    else:
-        plt.style.use('dark_background')
-        plt.scatter(xs, ys, alpha=0.25, linewidth=0, c='white')
+    for i in range(3):
+        s = 2**(10 + i)
+        a = 0.8
+        cs = colors[np.random.randint(0, len(colors), size=(FLAGS.iter,))]
+        x, y = impl(x, y, s, a, cs)
     # plt.show()
     plt.axis('off')
-    plt.savefig('plot.png' if not FLAGS.name else f'{FLAGS.name}.png')
+    plt.savefig(name)
+    plt.close()
+
+
+def driver():
+    np.random.seed(32)
+    for i in range(32):
+        palette = f'/Users/fanyang/code/minGPT/palettes/palette_{i}.npy'
+        x = np.random.random()
+        y = np.random.random()
+        base_name = FLAGS.name if FLAGS.name else 'plot'
+        name = f'{base_name}_{i}.png'
+        main(palette, x, y, name)
+        # break
 
 
 if __name__ == "__main__":
     FLAGS(sys.argv)
-    main()
+    driver()
